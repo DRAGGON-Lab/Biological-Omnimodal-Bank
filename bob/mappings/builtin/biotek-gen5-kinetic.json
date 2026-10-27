@@ -1,0 +1,35 @@
+{
+  "schema": "bob-mapping/1",
+  "key": "biotek-gen5-kinetic",
+  "name": "BioTek Gen5 kinetic export",
+  "emoji": "🧫",
+  "modality": "plate_reader",
+  "description": "Gen5 Excel export of a kinetic run (Synergy family): a metadata header, then one block per read with a Time column, a temperature column, and one column per well.",
+  "source": {"format": "xlsx", "sheet_index": 0},
+  "metadata": {
+    "key_column": 1,
+    "value_column": 2,
+    "fields": {
+      "software_version": "Software Version",
+      "instrument_model": "Reader Type:",
+      "instrument_serial": "Reader Serial Number:",
+      "plate_type": "Plate Type",
+      "run_date": "Date",
+      "run_time": "Time"
+    }
+  },
+  "blocks": {
+    "label_column": 1,
+    "label_pattern": "^(?P<signal>[^:]+):(?P<optics>.+)$",
+    "header_offset": 2,
+    "time_header": "Time",
+    "position_pattern": "^[A-P](?:[1-9]|1[0-9]|2[0-4])$",
+    "temperature_header_pattern": "^T°"
+  },
+  "signals": [
+    {"match": "^OD", "kind": "absorbance", "unit": "OD", "optics_pattern": "^(?P<wavelength>\\d+)$"},
+    {"match": "^LUM", "kind": "luminescence", "unit": "RLU"},
+    {"match": ".*", "optics_match": "^\\d+$", "kind": "absorbance", "unit": "OD", "optics_pattern": "^(?P<wavelength>\\d+)$"},
+    {"match": ".*", "kind": "fluorescence", "unit": "RFU", "optics_pattern": "^(?P<excitation>[\\d/]+),(?P<emission>[\\d/]+)$"}
+  ]
+}

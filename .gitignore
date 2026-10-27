@@ -1,0 +1,8 @@
+.venv/
+data/
+dist/
+__pycache__/
+*.pyc
+.pytest_cache/
+*.tar
+.DS_Store

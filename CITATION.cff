@@ -1,0 +1,17 @@
+cff-version: 1.2.0
+message: "If you use BOB in your work, please cite it as below."
+title: "BOB: Biological Omnimodal Bank"
+abstract: "Stores plate-reader measurements with the SBOL designs they came from, keeping raw instrument files unchanged and exporting studies as SBOL 2.3, ISA-JSON and RO-Crate."
+type: software
+authors:
+  - family-names: Vitalis
+    given-names: Carolus
+    email: carolus.vitalis@outlook.com
+version: 1.0.0
+date-released: 2026-10-22
+license-url: "https://polyformproject.org/licenses/noncommercial/1.0.0"
+keywords:
+  - synthetic biology
+  - plate reader
+  - SBOL
+  - characterization data

@@ -1,0 +1,27 @@
+# Runs BOB on PostgreSQL instead of SQLite:
+#   BOB_DB_PASSWORD=choose-one docker compose -f docker-compose.yml -f docker-compose.postgres.yml up -d
+services:
+  db:
+    image: postgres:18
+    environment:
+      POSTGRES_DB: bob
+      POSTGRES_USER: bob
+      POSTGRES_PASSWORD: ${BOB_DB_PASSWORD:?Set BOB_DB_PASSWORD}
+    volumes:
+      - bob-db:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U bob -d bob"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+
+  bob:
+    environment:
+      DATABASE_URL: postgresql+psycopg://bob:${BOB_DB_PASSWORD:?Set BOB_DB_PASSWORD}@db/bob
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  bob-db:

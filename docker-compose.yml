@@ -1,0 +1,20 @@
+services:
+  bob:
+    build: .
+    image: bob:1.0.0
+    ports:
+      - "127.0.0.1:${BOB_PORT:-8000}:8000"
+    environment:
+      BOB_MODE: ${BOB_MODE:-full}
+      BOB_SEED_DEMO: ${BOB_SEED_DEMO:-1}
+      BOB_BASE_IRI: ${BOB_BASE_IRI:-http://localhost:8000}
+      BOB_ALLOWED_HOSTS: ${BOB_ALLOWED_HOSTS:-localhost,127.0.0.1}
+      BOB_ALLOW_SIGNUP: ${BOB_ALLOW_SIGNUP:-1}
+      BOB_CORS_ORIGINS: ${BOB_CORS_ORIGINS:-https://synbiosuite.org}
+      BOB_SYNBIOHUB_INSTANCES: ${BOB_SYNBIOHUB_INSTANCES:-https://synbiohub.org}
+    volumes:
+      - bob-data:/data
+    restart: unless-stopped
+
+volumes:
+  bob-data:

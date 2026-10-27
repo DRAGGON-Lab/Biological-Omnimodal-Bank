@@ -1,0 +1,25 @@
+# A throwaway SynBioHub for the integration tests (SynBioHub's own recipe, minus its autoheal
+# container, which needs the Docker socket):
+#   docker compose -p sbhqa -f tests/synbiohub/docker-compose.yml up -d
+services:
+  virtuoso:
+    image: tenforce/virtuoso:virtuoso7.2.5
+    environment:
+      VIRT_SPARQL_MaxQueryCostEstimationTime: default
+      VIRT_SPARQL_MaxQueryExecutionTime: "300"
+    volumes:
+      - virtuoso-db:/data
+
+  synbiohub:
+    image: synbiohub/synbiohub:1.6.1-standalone
+    depends_on:
+      - virtuoso
+    ports:
+      - "127.0.0.1:7777:7777"
+    volumes:
+      - sbh:/mnt
+      - virtuoso-db:/virtuoso
+
+volumes:
+  virtuoso-db:
+  sbh:

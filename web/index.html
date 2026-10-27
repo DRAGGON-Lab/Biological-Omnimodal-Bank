@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="light dark">
+  <title>BOB · Biological Omnimodal Bank</title>
+  <link rel="icon" href="icon-32.png" type="image/png" sizes="32x32">
+  <link rel="icon" href="icon-512.png" type="image/png" sizes="512x512">
+  <link rel="apple-touch-icon" href="icon-180.png">
+  <link rel="stylesheet" href="style.css?v=__BOB_VERSION__">
+</head>
+
+<body>
+  <div class="backdrop" aria-hidden="true"></div>
+
+  <div id="boot" class="boot" role="status">
+    <span class="spinner lg" aria-hidden="true"></span>
+    <span id="boot-text">Connecting to BOB…</span>
+  </div>
+
+  <!-- Signed out: app.js fills #landing; the sign-in panel opens in a dialog -->
+  <main id="auth-screen" class="landing" hidden>
+    <header class="landing-bar">
+      <span class="landing-brand"><img src="icon-64.png" alt="" width="34" height="34"><span class="header-title">BOB</span></span>
+      <div class="landing-actions">
+        <button type="button" class="btn btn-quiet" data-open-auth="signin">Sign in</button>
+        <button type="button" class="btn btn-accent" data-open-auth="signup">Create account</button>
+      </div>
+    </header>
+    <div id="landing"></div>
+    <div hidden>
+      <div class="auth-panel" id="auth-panel">
+        <nav class="tab-bar" id="auth-tabs" aria-label="Sign in or create an account">
+          <div class="tab-indicator" aria-hidden="true"></div>
+          <button type="button" class="tab active" data-auth="signin" aria-pressed="true">Sign in</button>
+          <button type="button" class="tab" data-auth="signup" aria-pressed="false">Create account</button>
+        </nav>
+
+        <form id="form-signin" novalidate>
+          <div class="form-row">
+            <label class="form-label" for="si-email">Email</label>
+            <input type="email" id="si-email" autocomplete="username" required placeholder="you@lab.org">
+          </div>
+          <div class="form-row">
+            <label class="form-label" for="si-password">Password</label>
+            <input type="password" id="si-password" autocomplete="current-password" required>
+          </div>
+          <div class="field-error" id="si-error" role="alert" hidden></div>
+          <div class="form-actions">
+            <button type="submit" class="btn btn-accent btn-lg">Sign in</button>
+          </div>
+        </form>
+
+        <form id="form-signup" novalidate hidden>
+          <div class="form-row">
+            <label class="form-label" for="su-email">Email</label>
+            <input type="email" id="su-email" autocomplete="username" required placeholder="you@lab.org">
+          </div>
+          <div class="form-row">
+            <label class="form-label" for="su-name">Name</label>
+            <input type="text" id="su-name" autocomplete="name" required placeholder="Flo Rescence">
+          </div>
+          <div class="form-row">
+            <label class="form-label" for="su-password">Password<span class="help" tabindex="0" data-help="At least 8 characters. A passphrase of several words is easier to remember and harder to guess."></span></label>
+            <input type="password" id="su-password" autocomplete="new-password" required minlength="8" placeholder="At least 8 characters">
+          </div>
+          <div class="hint">Creating an account also creates a personal workspace for your projects.</div>
+          <div class="field-error" id="su-error" role="alert" hidden></div>
+          <div class="form-actions">
+            <button type="submit" class="btn btn-accent btn-lg">Create account</button>
+          </div>
+        </form>
+
+        <p class="auth-foot" id="auth-foot" hidden></p>
+      </div>
+    </div>
+  </main>
+
+  <!-- Signed in -->
+  <div id="app" class="app" hidden>
+    <header class="header">
+      <div class="header-bar">
+        <div class="hmenu">
+          <button type="button" class="pill-btn" id="ws-btn" aria-haspopup="menu" aria-expanded="false" aria-controls="ws-menu" aria-label="Workspace">
+            <svg class="ico pill-glyph" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8.5" r="3.5"/><path d="M2.5 20c0-3.6 2.9-6.5 6.5-6.5s6.5 2.9 6.5 6.5"/><path d="M16 5.2a3.5 3.5 0 0 1 0 6.6M18 13.8c2 .9 3.5 3.2 3.5 6.2"/></svg>
+            <span class="pill-label" id="ws-name"></span>
+            <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+          </button>
+          <span id="role-slot"></span>
+          <div class="menu menu-left" id="ws-menu" role="menu" aria-label="Workspaces" hidden></div>
+        </div>
+        <div class="hmenu">
+          <button type="button" class="pill-btn" id="account-btn" aria-haspopup="menu" aria-expanded="false" aria-controls="account-menu">
+            <span class="avatar" id="avatar" aria-hidden="true"></span>
+            <span class="pill-label" id="account-name"></span>
+            <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+          </button>
+          <div class="menu" id="account-menu" role="menu" aria-label="Account" hidden></div>
+        </div>
+      </div>
+      <a class="home-link" href="#/home" aria-label="BOB home">
+        <img src="icon-180.png" alt="" class="header-icon" width="56" height="56">
+        <span class="header-title">BOB</span>
+        <span class="header-subtitle">Biological Omnimodal Bank</span>
+      </a>
+    </header>
+
+    <nav class="tab-bar sticky" id="tab-bar" aria-label="Sections">
+      <div class="tab-indicator" id="tab-indicator" aria-hidden="true"></div>
+      <a class="tab" href="#/home" data-tab="home">Home</a>
+      <a class="tab" href="#/projects" data-tab="projects">Projects</a>
+      <a class="tab" href="#/mappings" data-tab="mappings">Mappings</a>
+    </nav>
+
+    <main id="view" class="view" tabindex="-1"></main>
+
+    <footer class="app-foot" id="app-foot"></footer>
+  </div>
+
+  <div class="toasts" id="toasts" aria-live="polite"></div>
+
+  <script src="plot.js?v=__BOB_VERSION__"></script>
+  <script src="app.js?v=__BOB_VERSION__"></script>
+</body>
+
+</html>
