@@ -1,0 +1,89 @@
+name: bob
+
+services:
+  db:
+    image: postgres:18
+    environment:
+      POSTGRES_DB: bob
+      POSTGRES_USER: bob
+      POSTGRES_PASSWORD_FILE: /run/secrets/db_password
+    secrets:
+      - db_password
+    volumes:
+      - bob-db:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U bob -d bob"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+
+  migrate:
+    build: .
+    image: bob:${BOB_VERSION:-local}
+    command: ["python", "-m", "bob.migrate"]
+    environment: &bob-environment
+      BOB_ENV: production
+      BOB_MODE: full
+      BOB_DATA_DIR: /data
+      BOB_BASE_IRI: https://${BOB_DOMAIN:?Set BOB_DOMAIN}
+      BOB_ALLOWED_HOSTS: ${BOB_DOMAIN:?Set BOB_DOMAIN}
+      BOB_SECURE_COOKIES: "1"
+      BOB_ALLOW_SIGNUP: "0"
+      BOB_SEED_DEMO: "0"
+      BOB_AUTO_MIGRATE: "0"
+      BOB_SECRET_KEY_FILE: /run/secrets/app_secret
+      BOB_DB_PASSWORD_FILE: /run/secrets/db_password
+      BOB_CORS_ORIGINS: ${BOB_CORS_ORIGINS:-https://synbiosuite.org}
+      BOB_SYNBIOHUB_INSTANCES: ${BOB_SYNBIOHUB_INSTANCES:-https://synbiohub.org}
+    secrets:
+      - app_secret
+      - db_password
+    volumes:
+      - bob-data:/data
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: "no"
+
+  bob:
+    build: .
+    image: bob:${BOB_VERSION:-local}
+    environment: *bob-environment
+    secrets:
+      - app_secret
+      - db_password
+    volumes:
+      - bob-data:/data
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  caddy:
+    image: caddy:2.10-alpine
+    environment:
+      BOB_DOMAIN: ${BOB_DOMAIN:?Set BOB_DOMAIN}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      bob:
+        condition: service_healthy
+    restart: unless-stopped
+
+secrets:
+  app_secret:
+    file: ./secrets/app_secret
+  db_password:
+    file: ./secrets/db_password
+
+volumes:
+  bob-data:
+  bob-db:
+  caddy-data:
+  caddy-config:

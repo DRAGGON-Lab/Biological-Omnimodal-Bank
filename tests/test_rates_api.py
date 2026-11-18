@@ -252,6 +252,37 @@ def test_the_export_carries_standalone_reproducible_provenance(client, plate_byt
     assert isinstance(src["raw_file_sha256"], str) and len(src["raw_file_sha256"]) == 64
 
 
+def test_a_published_rate_profile_keeps_source_metadata_after_the_live_assay_is_deleted(client, plate_bytes):
+    ws = signup(client, "deleted-rates-source@lab.test")["workspaces"][0]
+    _, study = _project(client, ws["id"])
+    samples = _samples(client, study["id"])
+    assay = _upload(client, study["id"], plate_bytes)
+    assignments = {p: samples["consortium"]["id"] for p in fixtures.CONSORTIUM}
+    assignments |= {p: samples["host"]["id"] for p in fixtures.UNTRANSFORMED}
+    assignments |= {p: samples["medium"]["id"] for p in fixtures.MEDIUM}
+    client.put(f"/api/assays/{assay['id']}/layout", json={"assignments": assignments})
+    signals = client.get(f"/api/assays/{assay['id']}").json()["signals"]
+    published = client.post(
+        f"/api/studies/{study['id']}/publish",
+        json={"license": "CC0-1.0", "authors": [{"given_name": "Ada", "family_name": "Lovelace"}]},
+    )
+    assert published.status_code == 200, published.text
+
+    before = client.get(f"/api/assays/{assay['id']}/rates", params=_query(signals, version=1))
+    assert before.status_code == 200, before.text
+    expected = before.json()["source"]
+
+    removed = client.delete(f"/api/assays/{assay['id']}")
+    assert removed.status_code == 204, removed.text
+    after = client.get(f"/api/assays/{assay['id']}/rates", params=_query(signals, version=1))
+    assert after.status_code == 200, after.text
+    assert after.json()["source"] == expected
+    assert expected["assay_name"] == assay["name"]
+    assert expected["raw_file_name"] == assay["raw_file"]["filename"]
+    assert expected["raw_file_sha256"] == assay["raw_file"]["sha256"]
+    assert expected["mapping_key"] and expected["mapping_version"] >= 1
+
+
 def test_the_supported_reporter_and_biomass_pair_is_accepted(client, plate_bytes):
     assay, signals = _assay(client, plate_bytes)
     r = client.get(f"/api/assays/{assay['id']}/rates", params=_query(signals))

@@ -36,12 +36,13 @@ Interactive API documentation is at http://localhost:8000/docs once BOB is runni
 
 ## Documentation
 
-The wiki covers the details:
+Documentation is versioned with the code:
 
-- [Install and deploy](../../wiki/Install-and-deploy): prebuilt image, API-only mode, PostgreSQL, settings, running without Docker
-- [Using BOB](../../wiki/Using-BOB): how the data is organized, publishing and versions, analysis workflows, exports
-- [Standards and integrations](../../wiki/Standards-and-integrations): SBOL, ISA-JSON and RO-Crate, SynBioHub, workbooks and SynBioSuite
-- [Development](../../wiki/Development): tests, migrations, standards checks
+- [Install and deploy](docs/install-and-deploy.md): local quick start, the PostgreSQL/TLS production stack, settings, upgrades, and recovery
+- [Administration](docs/administration.md): first PI account, members, roles, publication, and operational checks
+- [Using BOB](docs/using-bob.md): data organization, analysis, publication, versions, and exports
+- [Standards and integrations](docs/standards-and-integrations.md): SBOL, ISA-JSON, RO-Crate, SynBioHub, workbooks, and SynBioSuite
+- [Development](docs/development.md): locked dependencies, tests, migrations, CI, and contribution workflow
 
 ## License
 

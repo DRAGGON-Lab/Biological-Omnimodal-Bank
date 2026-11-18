@@ -151,6 +151,7 @@ def snapshot(db: Session, study: Study) -> dict:
                 "id": a.id,
                 "name": a.name,
                 "modality": a.modality,
+                "mapping_id": a.mapping_id,
                 "mapping_key": a.mapping_key,
                 "mapping_version": a.mapping_version,
                 "mapping_name": _mapping_name(db, a),

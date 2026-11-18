@@ -4,5 +4,9 @@ dist/
 __pycache__/
 *.pyc
 .pytest_cache/
+.ruff_cache/
+.coverage
+coverage.xml
+secrets/
 *.tar
 .DS_Store

@@ -197,3 +197,32 @@ def test_a_preset_result_carries_its_raw_source_and_mapping_identity(client, pla
         "missing_source_reading", "missing_bracket_reading"}
     counts = body["provenance"]["biomass_alignment"]
     assert counts["target_points"] == len(body["times_h"])
+
+
+def test_a_published_preset_keeps_source_metadata_after_the_live_assay_is_deleted(client):
+    study, assay, od, fl = _setup(client, "deleted-preset-source@lab.test")
+    published = client.post(
+        f"/api/studies/{study['id']}/publish",
+        json={"license": "CC-BY-4.0", "authors": [{"given_name": "Ada", "family_name": "Lovelace"}]},
+    )
+    assert published.status_code == 200, published.text
+
+    before = client.get(
+        f"/api/assays/{assay['id']}/preset-series",
+        params=_q(preset="reporter_per_biomass", signal=fl, biomass_signal=od, version=1),
+    )
+    assert before.status_code == 200, before.text
+    expected = before.json()["source"]
+
+    removed = client.delete(f"/api/assays/{assay['id']}")
+    assert removed.status_code == 204, removed.text
+    after = client.get(
+        f"/api/assays/{assay['id']}/preset-series",
+        params=_q(preset="reporter_per_biomass", signal=fl, biomass_signal=od, version=1),
+    )
+    assert after.status_code == 200, after.text
+    assert after.json()["source"] == expected
+    assert expected["assay_name"] == assay["name"]
+    assert expected["raw_file_name"] == assay["raw_file"]["filename"]
+    assert expected["raw_file_sha256"] == assay["raw_file"]["sha256"]
+    assert expected["mapping_key"] and expected["mapping_version"] >= 1

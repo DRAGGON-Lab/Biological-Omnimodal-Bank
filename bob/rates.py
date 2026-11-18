@@ -162,14 +162,14 @@ def growth_rate(times_s, biomass: Series, delta: float = 1.0, lam: float | None 
     n = _basis_count(th, delta, int(mask.sum()))
     integral = _basis_integral(th, delta, n)
     design = gaussian_basis(th, delta, n)
-    tm, bm, im = th[mask], b[mask], integral[mask]
+    bm, im = b[mask], integral[mask]
     mask_pos = bm > 0
 
     def model(theta):
         return theta[0] * np.exp(im @ theta[1:])
 
-    def solve(l):
-        root = math.sqrt(l)
+    def solve(candidate_lam):
+        root = math.sqrt(candidate_lam)
 
         def resid(theta):
             return np.concatenate([model(theta) - bm, root * theta])
@@ -235,8 +235,8 @@ def production_rate(times_s, reporter: Series, biomass: Series, gamma: float = 0
     design = gaussian_basis(th, delta, n)
     A, obs = full[ymask], y[ymask]
 
-    def solve(l):
-        root = math.sqrt(l)
+    def solve(candidate_lam):
+        root = math.sqrt(candidate_lam)
         aug = np.vstack([A, root * np.eye(n + 1)])
         rhs = np.concatenate([obs, np.zeros(n + 1)])
         if _force_nonlinear:
