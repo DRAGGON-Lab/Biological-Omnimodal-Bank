@@ -14,7 +14,8 @@ concurrency:
 
 env:
   UV_FROZEN: "1"
-  XDG_CACHE_HOME: ${{ runner.temp }}/cache
+  # The `runner` context is not available at workflow-level validation time.
+  XDG_CACHE_HOME: /tmp/bob-cache
 
 jobs:
   quality:
