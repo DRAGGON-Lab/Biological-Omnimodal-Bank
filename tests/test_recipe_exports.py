@@ -15,7 +15,7 @@ import zipfile
 import pytest
 
 from tests.conftest import signup
-from tests.test_recipes_api import (_assay_for, _body, _fingerprint, _pick, _study_with_assay)
+from tests.test_recipes_api import _assay_for, _body, _study_with_assay
 
 SHA256_RE = re.compile(r"\b[0-9a-f]{64}\b")
 
@@ -368,8 +368,6 @@ def test_not_checked_boxes_never_make_an_all_clear(client):
 @pytest.fixture
 def manifest_bearing(client, plate_bytes):
     """A published study whose exports carry a recipe manifest, live and at a frozen version."""
-    from tests.test_api import _samples
-
     study, s, host, med = _study_with_assay(client, "validated@lab.test")
     assay, signals = _assay_for(client, study, s, host, med, plate_bytes)
     # the supplement is chemical context, so every well compared against another must share it,

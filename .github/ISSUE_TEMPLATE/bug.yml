@@ -1,0 +1,42 @@
+name: Bug report
+description: Report reproducible incorrect behavior using synthetic or non-sensitive data.
+title: "[Bug]: "
+labels: ["type:bug"]
+body:
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary and impact
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: BOB version or commit
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Reproduction steps
+      description: Use synthetic data and remove all credentials and private records.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected and actual behavior
+    validations:
+      required: true
+  - type: textarea
+    id: deployment
+    attributes:
+      label: Deployment context
+      description: Database, operating system, container tag, and relevant redacted configuration.
+  - type: checkboxes
+    id: safety
+    attributes:
+      label: Data safety
+      options:
+        - label: I removed credentials, tokens, private raw data, and identifiable research data.
+          required: true

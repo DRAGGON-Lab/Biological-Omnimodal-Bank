@@ -309,6 +309,8 @@ def test_signup_can_be_closed(data_dir, monkeypatch):
 def test_unknown_host_header_is_refused(client):
     assert client.get("/health", headers={"Host": "attacker.test"}).status_code == 400
     assert client.get("/health").status_code == 200
+    assert client.get("/livez").json()["status"] == "ok"
+    assert client.get("/readyz").json()["status"] == "ready"
 
 
 def test_only_web_and_urn_iris_are_accepted(client):

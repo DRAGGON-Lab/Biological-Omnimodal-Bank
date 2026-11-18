@@ -1,0 +1,64 @@
+[project]
+name = "biological-omnimodal-bank"
+version = "1.0.0"
+description = "A provenance-preserving characterization data bank for synthetic biology."
+readme = "README.md"
+requires-python = ">=3.12,<3.13"
+license = { file = "LICENSE" }
+dependencies = [
+  "fastapi==0.141.1",
+  "uvicorn==0.54.0",
+  "sqlalchemy==2.1.1",
+  "alembic==1.20.0",
+  "sbol2==1.4.1",
+  "argon2-cffi==25.1.0",
+  "itsdangerous==2.2.0",
+  "python-multipart==0.0.32",
+  "openpyxl==3.1.5",
+  "numpy==2.4.6",
+  "scipy==1.17.1",
+  "psycopg[binary]==3.3.6",
+  "cryptography==50.0.2",
+  "requests==2.34.2",
+]
+
+[dependency-groups]
+dev = [
+  "pytest==9.1.1",
+  "pytest-cov>=7,<8",
+  "httpx==0.28.1",
+  "jsonschema==4.26.0",
+  "rfc3339-validator==0.1.4",
+  "roc-validator==0.12.2",
+  "ruff>=0.14,<0.15",
+  "pyright>=1.1.400,<2",
+  "pip-audit>=2.9,<3",
+]
+
+[tool.uv]
+package = false
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 140
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F"]
+
+[tool.pyright]
+pythonVersion = "3.12"
+typeCheckingMode = "basic"
+venvPath = "."
+venv = ".venv"
+reportMissingTypeStubs = false
+
+[tool.coverage.run]
+source = ["bob"]
+omit = ["bob/static/*"]
+
+[tool.coverage.report]
+skip_covered = true
+show_missing = true

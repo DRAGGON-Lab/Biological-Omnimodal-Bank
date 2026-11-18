@@ -1,0 +1,27 @@
+name: Feature request
+description: Propose a product, scientific workflow, deployment, or engineering improvement.
+title: "[Feature]: "
+labels: ["type:feature"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem to solve
+    validations:
+      required: true
+  - type: textarea
+    id: users
+    attributes:
+      label: Users and workflow
+    validations:
+      required: true
+  - type: textarea
+    id: outcome
+    attributes:
+      label: Desired outcome and acceptance criteria
+    validations:
+      required: true
+  - type: textarea
+    id: constraints
+    attributes:
+      label: Security, provenance, standards, or compatibility constraints

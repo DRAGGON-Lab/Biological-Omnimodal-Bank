@@ -6,6 +6,7 @@ from fastapi.openapi.docs import get_swagger_ui_html
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy import text
 from starlette.exceptions import HTTPException
 from starlette.middleware.cors import CORSMiddleware
 from starlette.middleware.sessions import SessionMiddleware
@@ -42,11 +43,12 @@ class WebFiles(StaticFiles):
 def create_app(settings: Settings | None = None) -> FastAPI:
     settings = settings or load_settings()
     engine = make_engine(settings.database_url)
-    migrate.upgrade(engine)
+    if settings.auto_migrate:
+        migrate.upgrade(engine)
     sessionmaker = make_sessionmaker(engine)
     with sessionmaker() as db:
         services.sync_builtin_mappings(db)
-        if os.environ.get("BOB_SEED_DEMO", "0") == "1":
+        if settings.seed_demo:
             from bob.seed import seed_demo
 
             seed_demo(db, settings)
@@ -83,6 +85,26 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     @app.get("/health")
     def health():
         return {"status": "ok", "version": __version__, "mode": settings.mode}
+
+    @app.get("/livez", include_in_schema=False)
+    def liveness():
+        return {"status": "ok", "version": __version__}
+
+    @app.get("/readyz", include_in_schema=False)
+    def readiness():
+        problems = []
+        try:
+            with engine.connect() as connection:
+                connection.execute(text("SELECT 1"))
+        except Exception:
+            problems.append("database unavailable")
+        if not settings.artifact_dir.is_dir() or not os.access(settings.artifact_dir, os.W_OK):
+            problems.append("artifact storage is not writable")
+        if not settings.auto_migrate and not migrate.is_current(engine):
+            problems.append("database migrations are not current")
+        if problems:
+            return JSONResponse({"status": "not ready", "problems": problems}, status_code=503)
+        return {"status": "ready", "version": __version__, "mode": settings.mode}
 
     app.mount("/docs-static", StaticFiles(directory=SWAGGER_DIR), name="docs-static")
 

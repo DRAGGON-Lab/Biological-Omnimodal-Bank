@@ -1,5 +1,7 @@
 import json
 
+from dataclasses import dataclass
+
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Request, Response, UploadFile
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
@@ -21,6 +23,23 @@ class LayoutIn(BaseModel):
     assignments: dict[str, str | None]
 
 
+@dataclass(frozen=True)
+class ResolvedSource:
+    """One authorized assay source, live or frozen, including its provenance.
+
+    Keeping measurements, layout, and metadata together prevents a versioned analysis from
+    accidentally falling back to a live row that may have changed or been removed.
+    """
+
+    signals: list[versions.SignalData]
+    layout: dict
+    metadata: dict
+
+
+def _split_csv(value: str) -> list[str]:
+    return [item.strip() for item in value.split(",") if item.strip()]
+
+
 def _mapping_name(db: Session, a: Assay) -> str | None:
     return db.scalar(select(InstrumentMapping.name).where(InstrumentMapping.id == a.mapping_id)) if a.mapping_id else None
 
@@ -36,13 +55,47 @@ def _published(db: Session, user: User, assay_id: str, number: int):
     return st, v, versions.snapshot_assay(v, assay_id)
 
 
-def _source(db: Session, user: User, assay_id: str, number: int | None):
-    """Measurements and plate layout of the live assay, or of one published version of it."""
+def _resolved_source(db: Session, user: User, assay_id: str, number: int | None) -> ResolvedSource:
+    """Measurements, layout, and provenance from the same authorized source."""
     if number is None:
         a = access.assay(db, user, assay_id)
-        return versions.live_signals(a), services.live_layout(a)
+        artifact = a.artifact
+        return ResolvedSource(
+            versions.live_signals(a),
+            services.live_layout(a),
+            {
+                "assay_id": assay_id,
+                "assay_name": a.name,
+                "snapshot_version": None,
+                "raw_file_name": artifact.filename,
+                "raw_file_sha256": artifact.sha256,
+                "mapping_id": a.mapping_id,
+                "mapping_key": a.mapping_key,
+                "mapping_version": a.mapping_version,
+            },
+        )
     _st, v, snap = _published(db, user, assay_id, number)
-    return versions.frozen_signals(versions.frozen(db, assay_id)), services.snapshot_layout(snap, v.snapshot["samples"])
+    raw = snap["raw_file"]
+    return ResolvedSource(
+        versions.frozen_signals(versions.frozen(db, assay_id)),
+        services.snapshot_layout(snap, v.snapshot["samples"]),
+        {
+            "assay_id": assay_id,
+            "assay_name": snap["name"],
+            "snapshot_version": number,
+            "raw_file_name": raw["filename"],
+            "raw_file_sha256": raw["sha256"],
+            "mapping_id": snap.get("mapping_id"),
+            "mapping_key": snap["mapping_key"],
+            "mapping_version": snap["mapping_version"],
+        },
+    )
+
+
+def _source(db: Session, user: User, assay_id: str, number: int | None):
+    """Compatibility helper for callers that only need measurements and layout."""
+    source = _resolved_source(db, user, assay_id, number)
+    return source.signals, source.layout
 
 
 @router.get("/studies/{study_id}/assays")
@@ -167,11 +220,10 @@ def series(
     db: Session = Depends(get_db),
 ):
     signals, layout = _source(db, user, assay_id, version)
-    split = lambda s: [x.strip() for x in s.split(",") if x.strip()]
     try:
         sig, values, od, corrected, control_type, controls_used, layout, warnings, provenance = services.prepared_values(
             signals, layout, signal, correct, threshold_sd, drop_below, normalize_by or None, min_od,
-            split(controls), split(normalize_controls), split(samples), context_acknowledged
+            _split_csv(controls), _split_csv(normalize_controls), _split_csv(samples), context_acknowledged
         )
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc))
@@ -229,11 +281,10 @@ def mean_expression(
     db: Session = Depends(get_db),
 ):
     signals, layout = _source(db, user, assay_id, version)
-    split = lambda s: [x.strip() for x in s.split(",") if x.strip()]
     try:
         sig, values, od, corrected, _ct, _cu, layout, warnings, provenance = services.prepared_values(
             signals, layout, signal, correct, 2.0, False, normalize_by or None, min_od,
-            split(controls), split(normalize_controls), split(samples), context_acknowledged
+            _split_csv(controls), _split_csv(normalize_controls), _split_csv(samples), context_acknowledged
         )
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc))
@@ -265,12 +316,11 @@ def preset_series(
     user: User = Depends(current_user),
     db: Session = Depends(get_db),
 ):
-    signals, layout = _source(db, user, assay_id, version)
-    row = db.get(Assay, assay_id)
-    split = lambda s: [p.strip() for p in s.split(",") if p.strip()]
+    resolved = _resolved_source(db, user, assay_id, version)
+    signals, layout = resolved.signals, resolved.layout
     try:
-        out = services.preset_inputs(signals, layout, preset, split(wells),
-                                     split(biomass_controls), split(reporter_controls),
+        out = services.preset_inputs(signals, layout, preset, _split_csv(wells),
+                                     _split_csv(biomass_controls), _split_csv(reporter_controls),
                                      signal, biomass_signal, context_acknowledged)
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc))
@@ -286,16 +336,7 @@ def preset_series(
         "times_h": [(x - t0) / 3600 for x in out["times"]],
         "absolute_times_s": out["times"],
         "provenance": out["provenance"],
-        "source": {
-            "assay_id": assay_id,
-            "assay_name": row.name,
-            "snapshot_version": version,
-            "raw_file_name": getattr(getattr(row, "artifact", None), "filename", None),
-            "raw_file_sha256": getattr(getattr(row, "artifact", None), "sha256", None),
-            "mapping_id": row.mapping_id,
-            "mapping_key": row.mapping_key,
-            "mapping_version": row.mapping_version,
-        },
+        "source": resolved.metadata,
         "warnings": [],
     }
     if "biomass_alignment_per_point" in out:
@@ -347,13 +388,12 @@ def rates_profile(
     user: User = Depends(current_user),
     db: Session = Depends(get_db),
 ):
-    signals, layout = _source(db, user, assay_id, version)
-    row = db.get(Assay, assay_id)
-    raw_sha = getattr(getattr(row, "artifact", None), "sha256", None)
-    split = lambda s: [p.strip() for p in s.split(",") if p.strip()]
+    resolved = _resolved_source(db, user, assay_id, version)
+    signals, layout = resolved.signals, resolved.layout
     try:
         times, y, b, sig, bio, provenance = services.rate_inputs(
-            signals, layout, signal, biomass_signal, split(wells), split(biomass_controls), split(reporter_controls), context_acknowledged
+            signals, layout, signal, biomass_signal, _split_csv(wells), _split_csv(biomass_controls),
+            _split_csv(reporter_controls), context_acknowledged
         )
         growth = rates.growth_rate(times, b, delta=delta, lam=lam)
         production = rates.production_rate(times, y, b, gamma=gamma, delta=delta, lam=lam)
@@ -411,13 +451,11 @@ def rates_profile(
     return {
         "assay_id": assay_id,
         "source": {
-            "assay_id": assay_id,
-            "snapshot_version": version,
+            **resolved.metadata,
             "reporter_signal": sig.name,
             "reporter_unit": sig.unit,
             "biomass_signal": bio.name,
             "biomass_unit": bio.unit,
-            "raw_file_sha256": raw_sha,
         },
         "method": rates.METHOD,
         "method_version": rates.METHOD_VERSION,

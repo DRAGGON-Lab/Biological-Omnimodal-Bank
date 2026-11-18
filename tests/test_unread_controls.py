@@ -12,8 +12,6 @@ unread, each in a different channel, which is what separates the two cases.
 import datetime as dt
 import math
 
-import pytest
-
 from tests.conftest import signup
 from tests.test_api import _project
 

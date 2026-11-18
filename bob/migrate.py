@@ -5,6 +5,8 @@ from pathlib import Path
 
 from alembic import command
 from alembic.config import Config
+from alembic.migration import MigrationContext
+from alembic.script import ScriptDirectory
 from sqlalchemy.engine import Engine
 
 MIGRATIONS_DIR = Path(__file__).resolve().parent / "migrations"
@@ -22,6 +24,14 @@ def upgrade(engine: Engine) -> None:
     with engine.begin() as connection:
         cfg.attributes["connection"] = connection
         command.upgrade(cfg, "head")
+
+
+def is_current(engine: Engine) -> bool:
+    cfg = alembic_config(engine.url.render_as_string(hide_password=False))
+    expected = set(ScriptDirectory.from_config(cfg).get_heads())
+    with engine.connect() as connection:
+        current = set(MigrationContext.configure(connection).get_current_heads())
+    return current == expected
 
 
 def main(argv: list[str]) -> int:

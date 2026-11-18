@@ -1,6 +1,6 @@
 from bob import fixtures
 from tests.conftest import signup
-from tests.test_api import _project, _samples, _upload
+from tests.test_api import _project, _upload
 
 
 def _study_with_assay(client, email="recipes@lab.test"):

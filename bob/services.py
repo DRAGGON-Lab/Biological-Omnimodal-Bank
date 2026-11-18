@@ -1,8 +1,10 @@
 import hashlib
 import os
 import re
+import tempfile
 from pathlib import Path
 
+import numpy as _np
 from fastapi import HTTPException
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
@@ -131,9 +133,19 @@ def store_artifact(db: Session, settings: Settings, workspace_id: str, filename:
     path: Path = settings.artifact_dir / key
     if not path.exists():
         path.parent.mkdir(parents=True, exist_ok=True)
-        tmp = path.with_suffix(".part")
-        tmp.write_bytes(data)
-        tmp.replace(path)
+        # A digest has one final path, but concurrent uploads need distinct temporary files.
+        # Replacing the destination is safe even if another request won the race because both
+        # requests computed the same digest over identical bytes.
+        handle, tmp_name = tempfile.mkstemp(prefix=f".{digest}.", suffix=".part", dir=path.parent)
+        tmp = Path(tmp_name)
+        try:
+            with os.fdopen(handle, "wb") as stream:
+                stream.write(data)
+                stream.flush()
+                os.fsync(stream.fileno())
+            tmp.replace(path)
+        finally:
+            tmp.unlink(missing_ok=True)
     artifact = Artifact(
         workspace_id=workspace_id,
         filename=safe_filename(filename),
@@ -559,8 +571,6 @@ def study_record(snap: dict, base_iri: str, version: int | None = None, recipe_m
                        creators, LICENSES.get(st.get("license"), ""), recipe_manifest or "")
 
 
-import numpy as _np
-
 NON_CHEMICAL_ROLES = frozenset({"strain", "design", "plasmid", "vector"})
 
 
@@ -749,8 +759,6 @@ def preset_inputs(signals, layout, preset: str, positions: list[str],
     A preset asks only for the controls its measurement needs: a biomass curve needs medium-only
     wells and no host at all, while a corrected reporter needs matched untransformed cells.
     """
-    from bob import recipes as _recipes
-
     if preset not in _PRESET_CONTROLS:
         raise ValueError(f"unknown preset {preset!r}")
     needs = _PRESET_CONTROLS[preset]
